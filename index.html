@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Scraper de Empresas (Google Maps)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-50 text-gray-800 font-sans">
+    <div class="max-w-3xl mx-auto py-10 px-6">
+        <h1 class="text-3xl font-bold mb-4 text-center">🗺️ Scraper de Empresas en Google Maps</h1>
+
+        <!-- Sección archivo -->
+        <div class="bg-white rounded-lg shadow p-6 mb-6">
+            <label class="block mb-2 text-lg font-semibold">📂 Selecciona archivo de empresas (.txt):</label>
+            <div class="flex items-center space-x-4">
+                <input type="text" id="filePath" class="flex-1 border rounded px-3 py-2"
+                    placeholder="Selecciona un archivo..." readonly>
+                <button id="selectFile"
+                    class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded">Buscar</button>
+            </div>
+        </div>
+
+        <!-- Sección acciones -->
+        <div class="flex justify-between mb-6">
+            <button id="startScraping"
+                class="bg-green-600 hover:bg-green-700 text-white font-bold px-6 py-3 rounded disabled:opacity-50">Iniciar
+                búsqueda</button>
+            <button id="openExcel" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 py-2 rounded"
+                disabled>Abrir Excel</button>
+        </div>
+
+        <!-- Sección progreso -->
+        <div id="progressContainer" class="hidden mb-6">
+            <label class="block text-sm font-semibold mb-1">Progreso:</label>
+            <div class="w-full bg-gray-300 rounded-full h-4 overflow-hidden">
+                <div id="progressBar" class="bg-green-500 h-4 transition-all" style="width: 0%;"></div>
+            </div>
+            <p class="mt-2 text-sm text-gray-600" id="progressText">0 de 0 empresas procesadas</p>
+        </div>
+
+        <!-- Sección consola/log -->
+        <div class="bg-black text-white text-sm p-4 rounded shadow h-60 overflow-y-auto" id="logOutput">
+            <p>📝 Logs aparecerán aquí...</p>
+        </div>
+    </div>
+
+    <script src="renderer.js"></script>
+</body>
+
+</html>

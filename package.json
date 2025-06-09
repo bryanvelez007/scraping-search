@@ -1,0 +1,28 @@
+{
+  "name": "search_companies",
+  "version": "1.0.0",
+  "description": "Scraper de empresas usando Electron, Playwright y ExcelJS",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder"
+  },
+  "build": {
+    "appId": "com.tuscrapers.maps",
+    "win": {
+      "target": "nsis"
+    }
+  },
+  "keywords": [],
+  "author": "Bryan",
+  "license": "ISC",
+  "dependencies": {
+    "exceljs": "^4.4.0",
+    "playwright": "^1.52.0",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "electron": "^36.4.0",
+    "electron-builder": "^26.0.12"
+  }
+}
