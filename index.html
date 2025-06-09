@@ -8,46 +8,142 @@
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
-<body class="bg-gray-50 text-gray-800 font-sans">
+<body class="bg-gray-100 text-gray-800 font-sans">
     <div class="max-w-3xl mx-auto py-10 px-6">
-        <h1 class="text-3xl font-bold mb-4 text-center">🗺️ Scraper de Empresas en Google Maps</h1>
+        <h1 class="text-4xl font-bold text-center text-blue-700 mb-8">
+            🗺️ Scraper de Empresas - Google Maps
+        </h1>
+
+        <!-- Estado -->
+        <div class="mb-4 text-center">
+            <span id="statusBadge"
+                class="inline-block bg-gray-300 text-gray-800 px-4 py-1 rounded-full text-sm font-medium">Esperando...</span>
+        </div>
 
         <!-- Sección archivo -->
         <div class="bg-white rounded-lg shadow p-6 mb-6">
             <label class="block mb-2 text-lg font-semibold">📂 Selecciona archivo de empresas (.txt):</label>
             <div class="flex items-center space-x-4">
-                <input type="text" id="filePath" class="flex-1 border rounded px-3 py-2"
-                    placeholder="Selecciona un archivo..." readonly>
+                <input type="text" id="filePath" class="flex-1 border rounded px-3 py-2 text-sm bg-gray-100" readonly
+                    placeholder="Selecciona un archivo..." />
                 <button id="selectFile"
-                    class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded">Buscar</button>
+                    class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded transition duration-200">
+                    Buscar
+                </button>
             </div>
         </div>
 
-        <!-- Sección acciones -->
-        <div class="flex justify-between mb-6">
+        <!-- Acciones -->
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
             <button id="startScraping"
-                class="bg-green-600 hover:bg-green-700 text-white font-bold px-6 py-3 rounded disabled:opacity-50">Iniciar
-                búsqueda</button>
-            <button id="openExcel" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 py-2 rounded"
-                disabled>Abrir Excel</button>
+                class="bg-green-600 hover:bg-green-700 text-white font-bold px-4 py-3 rounded transition disabled:opacity-50">
+                ▶️ Iniciar búsqueda
+            </button>
+            <button id="stopScraping"
+                class="bg-red-600 hover:bg-red-700 text-white font-semibold px-4 py-3 rounded transition disabled:opacity-50"
+                disabled>
+                ⛔ Detener
+            </button>
+            <button id="openExcel"
+                class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 py-3 rounded transition disabled:opacity-50"
+                disabled>
+                📊 Abrir Excel
+            </button>
         </div>
 
-        <!-- Sección progreso -->
+        <!-- Progreso -->
         <div id="progressContainer" class="hidden mb-6">
             <label class="block text-sm font-semibold mb-1">Progreso:</label>
             <div class="w-full bg-gray-300 rounded-full h-4 overflow-hidden">
-                <div id="progressBar" class="bg-green-500 h-4 transition-all" style="width: 0%;"></div>
+                <div id="progressBar" class="bg-green-500 h-4 transition-all duration-500 ease-in-out"
+                    style="width: 0%;"></div>
             </div>
-            <p class="mt-2 text-sm text-gray-600" id="progressText">0 de 0 empresas procesadas</p>
+            <p class="mt-2 text-sm text-gray-700" id="progressText">0 de 0 empresas procesadas</p>
         </div>
 
-        <!-- Sección consola/log -->
-        <div class="bg-black text-white text-sm p-4 rounded shadow h-60 overflow-y-auto" id="logOutput">
-            <p>📝 Logs aparecerán aquí...</p>
+        <!-- Logs -->
+        <div class="bg-black text-white text-sm p-4 rounded shadow h-64 overflow-y-auto" id="logOutput">
+            <p class="text-gray-400">📝 Los logs aparecerán aquí...</p>
         </div>
     </div>
 
-    <script src="renderer.js"></script>
+    <script>
+        const logOutput = document.getElementById('logOutput');
+        const filePathInput = document.getElementById('filePath');
+        const selectFileBtn = document.getElementById('selectFile');
+        const startBtn = document.getElementById('startScraping');
+        const stopBtn = document.getElementById('stopScraping');
+        const openExcelBtn = document.getElementById('openExcel');
+        const statusBadge = document.getElementById('statusBadge');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progressText');
+
+        function appendLog(text, color = 'white') {
+            const p = document.createElement('p');
+            p.textContent = `[${new Date().toLocaleTimeString()}] ${text}`;
+            p.classList.add(`text-${color}-400`);
+            logOutput.appendChild(p);
+            logOutput.scrollTop = logOutput.scrollHeight;
+        }
+
+        selectFileBtn.addEventListener('click', () => window.electronAPI.selectFile());
+
+        startBtn.addEventListener('click', () => {
+            window.electronAPI.startScraping();
+            updateStatus('En progreso...', 'yellow-400');
+            stopBtn.disabled = false;
+            startBtn.disabled = true;
+        });
+
+        stopBtn.addEventListener('click', () => {
+            window.electronAPI.stopScraping();
+            appendLog('Scraping detenido por el usuario.', 'red');
+            updateStatus('Detenido', 'red-400');
+            stopBtn.disabled = true;
+            startBtn.disabled = false;
+        });
+
+        openExcelBtn.addEventListener('click', () => window.electronAPI.openExcel());
+
+        function updateStatus(text, colorClass) {
+            statusBadge.textContent = text;
+            statusBadge.className = `inline-block px-4 py-1 rounded-full text-sm font-medium bg-${colorClass} text-black`;
+        }
+
+        window.electronAPI.onFileSelected((event, filePath) => {
+            if (filePath) {
+                document.getElementById('filePath').value = filePath;
+                appendLog(`Archivo seleccionado: ${filePath}`, 'blue');
+            } else {
+                appendLog('⚠️ No se seleccionó ningún archivo.', 'yellow');
+            }
+        });
+
+        window.electronAPI.onScrapingStarted((_, total) => {
+            progressContainer.classList.remove('hidden');
+            progressBar.style.width = '0%';
+            progressText.textContent = `0 de ${total} empresas procesadas`;
+            appendLog(`Scraping iniciado para ${total} empresas.`, 'green');
+            updateStatus('En progreso...', 'yellow-400');
+            openExcelBtn.disabled = true;
+        });
+
+        window.electronAPI.onScrapingProgress((_, count, buscada, nombre) => {
+            const percent = Math.round((count / parseInt(progressText.textContent.split(' ')[2])) * 100);
+            progressBar.style.width = `${percent}%`;
+            progressText.textContent = `${count} empresas procesadas. Última: "${buscada}" → "${nombre}"`;
+            appendLog(`✅ ${buscada} → ${nombre}`, 'green');
+        });
+
+        window.electronAPI.onScrapingDone(() => {
+            updateStatus('Completado ✅', 'green-400');
+            appendLog('Scraping finalizado. Archivo Excel generado.', 'green');
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            openExcelBtn.disabled = false;
+        });
+    </script>
 </body>
 
 </html>

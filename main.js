@@ -1,4 +1,3 @@
-
 // main.js
 const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const path = require('path');
@@ -10,6 +9,7 @@ let mainWindow;
 let filePath = '';
 let outputDir = '';
 let stopRequested = false;
+const localidadesVisitadas = new Set();
 
 function createWindow() {
     mainWindow = new BrowserWindow({
@@ -81,11 +81,15 @@ ipcMain.on('start-scraping', async () => {
             row.eachCell(cell => cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFCCCC' } });
         }
 
-        const relacionados = await scrapeRelacionados(page, empresaSet);
-        relacionados.forEach(info => {
-            const r = worksheet.addRow(info);
-            r.eachCell(cell => cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCCE5FF' } });
-        });
+        const localidad = extraerLocalidad(datos.direccion);
+        if (localidad && !localidadesVisitadas.has(localidad.toLowerCase())) {
+            localidadesVisitadas.add(localidad.toLowerCase());
+            const relacionados = await scrapeRelacionados(page, localidad, empresaSet);
+            relacionados.forEach(info => {
+                const r = worksheet.addRow(info);
+                r.eachCell(cell => cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCCE5FF' } });
+            });
+        }
 
         await workbook.xlsx.writeFile(excelPath);
         mainWindow.webContents.send('scraping-progress', worksheet.rowCount, empresa, datos.nombre);
@@ -101,6 +105,21 @@ ipcMain.on('open-excel', () => {
 });
 
 ipcMain.on('stop-scraping', () => { stopRequested = true; });
+
+function extraerLocalidad(direccion) {
+    const partes = direccion.split(',').map(p => p.trim());
+
+    // Buscar un segmento que tenga código postal y localidad
+    for (let i = 0; i < partes.length; i++) {
+        const match = partes[i].match(/\d{4,5}\s+(.+)/);
+        if (match) return match[1].trim();  // Devuelve la localidad (por ejemplo: Cascante)
+    }
+
+    // Fallback anterior: penúltimo elemento si no se encuentra el patrón
+    if (partes.length >= 2) return partes[partes.length - 2].trim();
+
+    return '';
+}
 
 async function scrapeEmpresa(nombreEmpresa, page) {
     const datos = {
@@ -135,28 +154,58 @@ async function scrapeEmpresa(nombreEmpresa, page) {
     return datos;
 }
 
-async function scrapeRelacionados(page, empresaSet) {
+async function scrapeRelacionados(page, localidad, empresaSet) {
     const relacionados = [];
-    const cards = await page.$$('div.Nv2PK');
-    for (const card of cards) {
-        const nombre = await safeTextEl(card, 'div[role="link"] span');
-        if (!nombre || empresaSet.has(nombre.toLowerCase())) continue;
+    const busquedas = [`Empresas en ${localidad} España`, `Negocios en ${localidad} España`];
 
+    for (const consulta of busquedas) {
         try {
-            await card.click();
-            await page.waitForTimeout(2000);
-            const datos = {
-                empresa_buscada: 'Relacionado',
-                nombre: await safeText(page, 'h1.DUwDvf.lfPIob'),
-                direccion: await safeText(page, 'button[data-item-id="address"]'),
-                telefono: await safeText(page, 'button[data-item-id^="phone:"]'),
-                web: await safeAttr(page, 'a[data-item-id="authority"]', 'href'),
-                maps_url: page.url(),
-                categoria: await safeText(page, 'button.DkEaL')
-            };
-            relacionados.push(datos);
-        } catch {}
+            await page.waitForSelector("input[name='q']", { timeout: 5000 });
+            await page.fill("input[name='q']", consulta);
+            await page.keyboard.press('Enter');
+            await page.waitForSelector(".m6QErb.DxyBCb.kA9KIf.dS8AEf.ecceSd", { timeout: 5000 });
+
+            const contenedorSelector = '.m6QErb.DxyBCb.kA9KIf.dS8AEf.ecceSd';
+            const existe = await page.$(contenedorSelector);
+            if (!existe) continue;
+
+            const cards = await page.$$('div.Nv2PK');
+
+            for (let i = 0; i < cards.length; i++) {
+                const card = cards[i];
+                const nombre = await safeTextEl(card, 'div.NrDZNb');
+                if (!nombre || empresaSet.has(nombre.toLowerCase())) continue;
+
+                try {
+                    await card.click();
+                    await page.waitForTimeout(2500);
+
+                    const datos = {
+                        empresa_buscada: `Relacionado (${localidad})`,
+                        nombre: await safeText(page, 'h1.DUwDvf.lfPIob'),
+                        direccion: await safeText(page, 'button[data-item-id="address"]'),
+                        telefono: await safeText(page, 'button[data-item-id^="phone:"]'),
+                        web: await safeAttr(page, 'a[data-item-id="authority"]', 'href'),
+                        maps_url: page.url(),
+                        categoria: await safeText(page, 'button.DkEaL')
+                    };
+
+                    relacionados.push(datos);
+
+                    const backButton = await page.$('button.hYBOP.FeXq4d');
+                    if (backButton) await backButton.click();
+                    await page.waitForTimeout(2000);
+                } catch (error) {
+                    console.warn(`Error obteniendo detalles de empresa relacionada "${nombre}":`, error.message);
+                }
+            }
+
+            break; // Exit loop if one search yields results
+        } catch (error) {
+            console.warn(`Error buscando relacionados con consulta "${consulta}":`, error.message);
+        }
     }
+
     return relacionados;
 }
 
