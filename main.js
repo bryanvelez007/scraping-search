@@ -56,7 +56,7 @@ ipcMain.on('start-scraping', async () => {
 
     mainWindow.webContents.send('scraping-started', empresas.length);
 
-    const browser = await chromium.launch({ headless: false });
+    const browser = await chromium.launch({ headless: true });
     const page = await browser.newPage();
     const excelPath = path.join(outputDir, 'empresas_info.xlsx');
     const workbook = new ExcelJS.Workbook();
@@ -131,11 +131,11 @@ async function scrapeEmpresa(nombreEmpresa, page) {
         await page.waitForSelector("input[name='q']", { timeout: 3000 });
         await page.fill("input[name='q']", nombreEmpresa + ' España');
         await page.keyboard.press('Enter');
-        await page.waitForTimeout(4000);
+      //  await page.waitForTimeout(4000);
 
         const firstResult = page.locator('.hfpxzc').first();
         if (await firstResult.count() > 0) await firstResult.click();
-        await page.waitForTimeout(3000);
+        //await page.waitForTimeout(3000);
 
         datos.nombre = await safeText(page, 'h1.DUwDvf.lfPIob');
         const direccion = await safeText(page, 'button[data-item-id="address"]');
@@ -178,7 +178,7 @@ async function scrapeRelacionados(page, localidad, empresaSet) {
 
                 try {
                     await card.click();
-                    await page.waitForTimeout(2500);
+                    //await page.waitForTimeout(2500);
 
                     const datos = {
                         empresa_buscada: `Relacionado (${localidad})`,
@@ -194,7 +194,7 @@ async function scrapeRelacionados(page, localidad, empresaSet) {
 
                     const backButton = await page.$('button.hYBOP.FeXq4d');
                     if (backButton) await backButton.click();
-                    await page.waitForTimeout(2000);
+                  //  await page.waitForTimeout(2000);
                 } catch (error) {
                     console.warn(`Error obteniendo detalles de empresa relacionada "${nombre}":`, error.message);
                 }
