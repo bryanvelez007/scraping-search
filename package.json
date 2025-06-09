@@ -1,7 +1,7 @@
 {
   "name": "search_companies",
   "version": "1.0.0",
-  "description": "Scraper de empresas usando Electron, Playwright y ExcelJS",
+  "description": "",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
